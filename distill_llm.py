@@ -140,9 +140,9 @@ def train(args):
             vae, weight_dtype
         )
 
-        u = torch.rand(size=(latent_image.shape[0],), device=latent_image.device)
+        u = torch.rand(size=(latent_image.shape[0],))
         indices = (u * noise_scheduler.config.num_train_timesteps).long()
-        timesteps = noise_scheduler.timesteps[indices].to(device=latent_image.device)
+        timesteps = noise_scheduler.timesteps[indices].to(accelerator.device)
         noise = torch.randn_like(latent_image)
         noisy_latent_image = noise_scheduler.scale_noise(latent_image, timesteps, noise)
 
