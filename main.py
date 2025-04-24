@@ -104,6 +104,36 @@ def parse_args(input_args=None):
         help="The column of the dataset containing a caption or a list of captions.",
     )
     parser.add_argument(
+        "--text_embedding_column",
+        type=str,
+        default=None,
+        help="The column of the dataset with precompute embedding for text_encoder (CLIP-L)."
+    )
+    parser.add_argument(
+        "--text_embedding_2_column",
+        type=str,
+        default=None,
+        help="The column of the dataset with precomputed embedding for text_encoder_2 (CLIP-G)."
+    )
+    parser.add_argument(
+        "--text_embedding_3_column",
+        type=str,
+        default=None,
+        help="The column of the dataset with precomputed embedding for text_encoder_3 (T5-XXL)."
+    )
+    parser.add_argument(
+        "--pooled_text_embedding_column",
+        type=str,
+        default=None,
+        help="The column of the dataset with precomputed pooled embedding for text_encoder (CLIP-L)."
+    )
+    parser.add_argument(
+        "--pooled_text_embedding_2_column",
+        type=str,
+        default=None,
+        help="The column of the dataset with precomputed pooled embedding for text_encoder_2 (CLIP-G)."
+    )
+    parser.add_argument(
         "--validation_prompt",
         type=str,
         default=None,
