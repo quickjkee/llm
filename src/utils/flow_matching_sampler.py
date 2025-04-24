@@ -37,8 +37,8 @@ class FlowMatchingSolver:
         sigmas = self.noise_scheduler.sigmas if sigmas is None else sigmas
 
         while True:
-            sigma = sigmas[idx_start].to(device=model.device)
-            sigma_next = sigmas[idx_start + 1].to(device=model.device)
+            sigma = sigmas[idx_start].to(device=latent.device)
+            sigma_next = sigmas[idx_start + 1].to(device=latent.device)
 
             with torch.autocast("cuda", dtype=torch.float16):
                 noise_pred = model(
