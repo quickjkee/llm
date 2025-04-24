@@ -3,7 +3,6 @@ from accelerate.logging import get_logger
 from pathlib import Path
 
 from src.utils.train_utils import distributed_sampling
-from distill_sd3_scalewise import prepare_models, prepare_accelertor, prepare_prompt_embed_from_caption
 from src.utils.flow_matching_sampler import FlowMatchingSolver
 from src.pipelines.stable_diffusion_3 import ScaleWiseStableDiffusion3Pipeline
 from src.utils.train_utils import unwrap_model
