@@ -397,6 +397,7 @@ def prepare_models(args, accelerator):
                                                            output_hidden_states=True)
     text_embedding_layer_llm = copy.deepcopy(transformer_llm.model.embed_tokens)
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path_llm)
+    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
     # We only train the additional adapter LoRA layers
     transformer_dm.requires_grad_(False)
