@@ -1,0 +1,22 @@
+target: yt_tools.dataloader.IterableDataloader
+params:
+  name: linkdb_en_v2
+  dataset:
+    target: yt_tools.yt_iterable_dataset.IterableYTDataset
+    params:
+      table: //home/yr/datasets/mj_sd3.5_cfg4.5_40_steps
+      yt_proxy: hahn
+  preprocess:
+    - in_map:
+        image_bytes: image
+      target: yt_tools.processing.process_fns.decode_image_pipeline
+      out_map: image
+    - in_map:
+        string: text
+      target: yt_tools.processing.process_fns.string_decode
+      out_map: text
+  stackable:
+    - image
+  non_stackable:
+    - text
+ 

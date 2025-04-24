@@ -1,0 +1,21 @@
+target: yt_tools.dataloader.IterableDataloader
+params:
+  name: mj_golden
+  dataset:
+    target: yt_tools.yt_iterable_dataset.IterableYTDataset
+    params:
+      table: //home/yr/VAR/mj_v6_golden/train_table_1024
+      yt_proxy: hahn
+  preprocess:
+    - in_map:
+        image_bytes: image
+      target: yt_tools.processing.process_fns.decode_image_pipeline
+      out_map: image
+    - in_map:
+        string: text
+      target: yt_tools.processing.process_fns.string_decode
+      out_map: text
+  stackable:
+    - image
+  non_stackable:
+    - text
