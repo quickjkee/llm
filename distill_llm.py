@@ -88,7 +88,7 @@ def train(args):
     tokenizer, text_embedding_layer_llm, \
     noise_scheduler, weight_dtype = prepare_models(args, accelerator)
 
-    ## Add an CNN upscaling and make it DDP
+    ## LLM+DM
     transformer_llm = TransformerLLM(transformer_llm,
                                      transformer_dm.pos_embed,
                                      transformer_dm.inner_dim)

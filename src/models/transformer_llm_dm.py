@@ -24,7 +24,7 @@ class TransformerLLM(nn.Module):
         self.first_linear_layer = nn.Linear(inner_dim_dm, transformer_llm.config.hidden_size)
         self.adapter_layer = nn.Sequential(
             self.first_linear_layer,
-            copy.deepcopy(transformer_llm.model.layers[0]),
+            copy.deepcopy(transformer_llm.model.model.layers[0]),
         )
         self.pos_embed_layer_dm = pos_embed_layer_dm
 
