@@ -1,3 +1,4 @@
+import copy
 from typing import Optional
 
 import torch
@@ -53,19 +54,12 @@ VALIDATION_PROMPTS = [
 # ----------------------------------------------------------------------------------------------------------------------
 @torch.no_grad()
 def log_validation(
-    pipeline,
-    args,
-    prepare_prompt_embed_from_caption,
-    solver,
-    noise_scheduler,
-    accelerator,
-    logger,
-    step,
-    num_images_per_prompt=4,
-    offloadable_encoders=None,
+        args,
+        accelerator,
+        tokenizer, text_embedding_layer_llm, transformer_llm,
+        fm_solver, noise_scheduler,
+        logger, global_step, image_processor, vae,
 ):
-    offloadable_encoders = offloadable_encoders or []
-    
     # Set validation prompts
     if args.validation_prompt is not None:
         logger.info(
@@ -75,56 +69,46 @@ def log_validation(
         validation_prompts = [args.validation_prompt]
     else:
         validation_prompts = VALIDATION_PROMPTS
-        
-    # run inference
+
     generator = torch.Generator(device=accelerator.device).manual_seed(args.seed) if args.seed else None
-    weight_dtype = pipeline.text_encoder.dtype
-    assert weight_dtype == torch.float16
-    
-    # Load text encoders to device
-    for encoder in offloadable_encoders:
-        encoder.to(accelerator.device)
+    weight_dtype = torch.float16
         
     image_logs = []
-    for _, prompt in enumerate(validation_prompts):    
+    for _, prompt in enumerate(validation_prompts):
         # Sample batch in a loop to save memory
-        prompt_embeds, pooled_prompt_embeds = prepare_prompt_embed_from_caption(
-            [prompt], pipeline.tokenizer, pipeline.tokenizer_2, pipeline.tokenizer_3,
-            pipeline.text_encoder, pipeline.text_encoder_2, pipeline.text_encoder_3,
-        )
-        
-        sigmas = noise_scheduler.sigmas[solver.boundary_idx]
-        timesteps = noise_scheduler.timesteps[solver.boundary_start_idx]
-        idx_start = torch.tensor([0] * len(prompt_embeds))
-        idx_end = torch.tensor([len(solver.boundary_idx) - 1] * len(prompt_embeds))
-        sampling_fn = solver.flow_matching_sampling_stochastic if args.stochastic_case else solver.flow_matching_sampling
+        inputs = tokenizer([prompt],
+                           padding=True,
+                           return_tensors="pt").to(accelerator.device)
+        embeds_llm = text_embedding_layer_llm(inputs["input_ids"])
+
+        noise_scheduler_ = copy.deepcopy(noise_scheduler)
+        noise_scheduler_.set_timesteps(28)
+        sigmas = noise_scheduler_.sigmas
+        idx_start = torch.tensor([0] * len(embeds_llm))
+        idx_end = torch.tensor([len(sigmas) - 1] * len(embeds_llm))
+        sampling_fn = fm_solver.flow_matching_sampling
         
         images = []
-        for _ in range(num_images_per_prompt):
+        for _ in range(4):
             latent = torch.randn(
                 (1, 16, 128, 128), 
                 generator=generator, 
                 device=accelerator.device
             )
             image = sampling_fn(
-                pipeline.transformer, latent,
-                prompt_embeds, pooled_prompt_embeds,
-                None, None,
+                transformer_llm,
+                latent,
+                embeds_llm,
                 idx_start, idx_end,
-                cfg_scale=0.0, do_scales=True if args.scales else False,
-                sigmas=sigmas, timesteps=timesteps, generator=generator
+                sigmas=sigmas,
             ).to(weight_dtype)
             
-            latent = (image / pipeline.vae.config.scaling_factor) + pipeline.vae.config.shift_factor
-            image = pipeline.vae.decode(latent, return_dict=False)[0]
-            image = pipeline.image_processor.postprocess(image, output_type='pil')[0]
+            latent = (image / vae.config.scaling_factor) + vae.config.shift_factor
+            image = vae.decode(latent, return_dict=False)[0]
+            image = image_processor.postprocess(image, output_type='pil')[0]
             images.append(image)
 
         image_logs.append({"validation_prompt": prompt, "images": images})
-        
-    # Offload text encoders back
-    for encoder in offloadable_encoders:
-        encoder.cpu()
     
     torch.cuda.empty_cache()
         
@@ -138,7 +122,7 @@ def log_validation(
                     formatted_images.append(np.asarray(image.resize((512, 512))))
 
                 formatted_images = np.stack(formatted_images)
-                tracker.writer.add_images(validation_prompt, formatted_images, step, dataformats="NHWC")
+                tracker.writer.add_images(validation_prompt, formatted_images, global_step, dataformats="NHWC")
         else:
             logger.warn(f"image logging not implemented for {tracker.name}")
 

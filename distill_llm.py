@@ -160,106 +160,25 @@ def train(args):
         progress_bar.update(1)
         global_step += 1
 
-        ### Model evaluation
-        ### ----------------------------------------------------
-        """
-        if global_step % args.evaluation_steps == 0:
-            image_processor = VaeImageProcessor(vae_scale_factor=vae.config.scaling_factor)
-            pipeline = Pipeline(
-                vae=vae,
-                transformer=unwrap_model(transformer, accelerator),
-                text_encoder=unwrap_model(text_encoder, accelerator),
-                text_encoder_2=unwrap_model(text_encoder_2, accelerator),
-                text_encoder_3=unwrap_model(text_encoder_3, accelerator),
-                tokenizer=tokenizer, tokenizer_2=tokenizer_2, tokenizer_3=tokenizer_3,
-                revision=args.revision,
-                variant=args.variant,
-                torch_dtype=weight_dtype,
-                image_processor=image_processor
-            )
-
-            for eval_set_name in ['mjhq', 'coco']:
-                eval_prompts_path = f'prompts/{eval_set_name}.csv'
-                if eval_set_name == "coco":
-                    fid_stats_path = args.coco_ref_stats_path
-                else:
-                    fid_stats_path = args.mjhq_ref_stats_path
-
-                images, prompts = distributed_sampling(
-                    pipeline,
-                    args,
-                    eval_prompts_path,
-                    prepare_prompt_embed_from_caption,
-                    fm_solver,
-                    noise_scheduler,
-                    accelerator,
-                    logger,
-                    offloadable_encoders=offloadable_encoders
-                )
-                if accelerator.is_main_process:
-                    torch.cuda.empty_cache()
-                    image_reward, pick_score, clip_score, fid_score = calculate_scores(
-                        args,
-                        images,
-                        prompts,
-                        ref_stats_path=fid_stats_path,
-                    )
-                    logs = {
-                        f"fid_{eval_set_name}": fid_score.item(),
-                        f"pick_score_{eval_set_name}": pick_score.item(),
-                        f"clip_score_{eval_set_name}": clip_score.item(),
-                        f"image_reward_{eval_set_name}": image_reward.item(),
-                    }
-                    print(eval_set_name, logs)
-                    accelerator.log(logs, step=global_step)
-                    copy_logs_to_logs_path(logging_dir)
-
-                torch.cuda.empty_cache()
-                accelerator.wait_for_everyone()
-        """
-        ### ----------------------------------------------------
-
-        ### Saving checkpoint
-        """
-        if accelerator.is_main_process:
-            if global_step % args.evaluation_steps == 0:
-                saving(transformer_llm, args, accelerator, global_step, logs)
-        accelerator.wait_for_everyone()
-        """
-
         ### Log validation images
         ### ----------------------------------------------------
-        """
         if accelerator.is_main_process:
             if global_step % args.validation_steps == 0:
                 image_processor = VaeImageProcessor(vae_scale_factor=vae.config.scaling_factor)
-                pipeline = Pipeline(
-                    vae=vae,
-                    transformer=unwrap_model(transformer, accelerator),
-                    text_encoder=unwrap_model(text_encoder, accelerator),
-                    text_encoder_2=unwrap_model(text_encoder_2, accelerator),
-                    text_encoder_3=unwrap_model(text_encoder_3, accelerator),
-                    tokenizer=tokenizer, tokenizer_2=tokenizer_2, tokenizer_3=tokenizer_3,
-                    revision=args.revision,
-                    variant=args.variant,
-                    torch_dtype=weight_dtype,
-                    image_processor=image_processor
-                )
+                fm_solver = FlowMatchingSolver(noise_scheduler)
 
                 log_validation(
-                    pipeline, args,
-                    prepare_prompt_embed_from_caption, fm_solver, noise_scheduler,
-                    accelerator, logger, global_step,
-                    offloadable_encoders=offloadable_encoders
+                    args, accelerator,
+                    tokenizer, text_embedding_layer_llm, transformer_llm,
+                    fm_solver, noise_scheduler,
+                    logger, global_step, image_processor, vae
                 )
                 copy_out_to_snapshot(args.output_dir)
                 copy_logs_to_logs_path(logging_dir)
 
-                del pipeline
                 torch.cuda.empty_cache()
 
         accelerator.wait_for_everyone()
-        """
         ### ----------------------------------------------------
 
         logs = {
