@@ -5,36 +5,31 @@ PORT=$(( ((RANDOM<<15)|RANDOM) % 27001 + 2000 ))
 echo $PORT
 
 MODEL_NAME="stabilityai/stable-diffusion-3.5-medium"
+MODEL_NAME_LLM="NousResearch/Meta-Llama-3-8B"
 DATASET_PATH="configs/data/mj_sd3.5_cfg4.5_40_steps_preprocessed.yaml"
 
 
 CUDA_VISIBLE_DEVICES=2,3 accelerate launch --num_processes=2 --multi_gpu --mixed_precision fp16 --main_process_port $PORT main.py \
-    --pretrained_model_name_or_path=$MODEL_NAME \
+    --pretrained_model_name_or_path_dm=$MODEL_NAME \
+    --pretrained_model_name_or_path_llm=$MODEL_NAME_LLM \
     --train_dataloader_config_path=$DATASET_PATH \
     --text_column="text" \
     --image_column="image" \
+    --text_embedding_column="vit_l_14_text_embedding" \
+    --text_embedding_2_column="vit_bigg_14_text_embedding" \
+    --text_embedding_3_column="t5xxl_text_embedding" \
+    --pooled_text_embedding_column="vit_l_14_pooled_text_embedding" \
+    --pooled_text_embedding_2_column="vit_bigg_14_pooled_text_embedding" \
     --train_batch_size=2 \
     --gradient_checkpointing \
     --checkpointing_steps=5000 \
     --learning_rate=2e-6 \
-    --num_boundaries=6 \
-    --scales="32,48,64,80,96,128" \
-    --do_gan_loss \
-    --do_pixels_downscale \
-    --stochastic_case \
-    --num_discriminator_upds=3 \
-    --num_discriminator_layers=4 \
     --lr_scheduler="constant_with_warmup" \
     --lr_warmup_steps=300 \
     --seed=42 \
     --output_dir="results" \
     --rank=64 \
-    --cls_blocks=11 \
-    --pdm_blocks=22 \
-    --cfg_teacher=4.5 \
-    --cfg_fake=4.5 \
     --apply_lora_to_attn_projections \
-    --apply_lora_to_mlp_projections \
     --validation_steps=20 \
     --evaluation_steps=10 \
     --coco_ref_stats_path stats/fid_stats_mscoco256_val.npz \
