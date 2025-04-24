@@ -619,12 +619,6 @@ def prepare_3rd_party(args, accelerator, dataloader_size):
     if accelerator.is_main_process:
         tracker_config = vars(deepcopy(args))
         # Tracker config doesn't support lists
-        tracker_config.pop("sizes")
-        tracker_config.pop("size_switch_steps")
-        tracker_config.pop("scales")
-        tracker_config.pop("cls_blocks")
-        tracker_config.pop("pdm_blocks")
-        tracker_config.pop("boundaries")
         accelerator.init_trackers("scalewise", config=tracker_config)
 # ----------------------------------------------------------------------------------------------------------------------
 
