@@ -325,7 +325,7 @@ def sample_batch(args, accelerator, batch,
     inputs = tokenizer(captions,
                       padding=True,
                       return_tensors="pt").to("cuda")
-    embeds_llm = llm_embedding(inputs[["input_ids"]])
+    embeds_llm = llm_embedding(inputs["input_ids"])
 
     return latent_image, embeds_llm, prompt_embeds_dm, pooled_prompt_embeds_dm
 # ----------------------------------------------------------------------------------------------------------------------
