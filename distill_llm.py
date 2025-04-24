@@ -92,7 +92,9 @@ def train(args):
     transformer_llm = TransformerLLM(transformer_llm,
                                      transformer_dm.pos_embed,
                                      transformer_dm.inner_dim)
-    transformer_llm = accelerator.prepare(transformer_llm)
+    transformer_llm = accelerator.prepare(transformer_llm).to(torch.float32)
+    transformer_dm = accelerator.prepare(transformer_dm)
+    text_embedding_layer_llm = accelerator.prepare(text_embedding_layer_llm)
 
     ## Prepare optimizers
     optimizer, lr_scheduler, params_to_optimize = prepare_optimizer(args, transformer_llm)
@@ -324,7 +326,7 @@ def sample_batch(args, accelerator, batch,
             )
     inputs = tokenizer(captions,
                       padding=True,
-                      return_tensors="pt").to("cuda")
+                      return_tensors="pt").to(accelerator.device)
     embeds_llm = llm_embedding(inputs["input_ids"])
 
     return latent_image, embeds_llm, prompt_embeds_dm, pooled_prompt_embeds_dm
@@ -395,9 +397,9 @@ def prepare_models(args, accelerator):
     # LLM specific
     transformer_llm = AutoModelForCausalLM.from_pretrained(args.pretrained_model_name_or_path_llm,
                                                            output_hidden_states=True)
-    text_embedding_layer_llm = copy.deepcopy(transformer_llm.model.embed_tokens)
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_model_name_or_path_llm)
-    tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+    tokenizer.pad_token = tokenizer.eos_token
+    text_embedding_layer_llm = copy.deepcopy(transformer_llm.model.embed_tokens)
 
     # We only train the additional adapter LoRA layers
     transformer_dm.requires_grad_(False)

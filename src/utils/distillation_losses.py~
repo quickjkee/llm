@@ -44,6 +44,8 @@ def diffusion_loss(
 
     ## Backpropagate
     accelerator.backward(loss)
+    with torch.no_grad():
+        print(model_pred.norm(),  model_pred_target.norm())
 
     if accelerator.sync_gradients:
         accelerator.clip_grad_norm_(params_to_optimize, args.max_grad_norm)
