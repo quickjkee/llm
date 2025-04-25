@@ -42,7 +42,7 @@ class TransformerLLM(nn.Module):
         self.adapter_layer.requires_grad_(True)
         self.proj_out.requires_grad_(True)
 
-    def forward(self, embeddings_text, latent_image, is_train=False):
+    def forward(self, embeddings_text, latent_image):
         # Create unified embeddings
         embeddings_image = self.pos_embed_layer_dm(latent_image) # [b x 16 x 128 x 128] -> [b x 4096 x 2432]
         embeddings_image = self.adapter_layer(embeddings_image) # [b x 4096 x 2432] -> [b x 4096 x 4096]
@@ -77,8 +77,5 @@ class TransformerLLM(nn.Module):
             shape=(hidden_states.shape[0], self.out_channels, height * patch_size, width * patch_size)
         )
 
-        if is_train:
-            return output, _
-        else:
-            return output
+        return output
 # ----------------------------------------------------------------------------------------------------------------------
