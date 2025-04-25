@@ -7,9 +7,9 @@ echo $PORT
 MODEL_NAME="stabilityai/stable-diffusion-3.5-medium"
 MODEL_NAME_LLM="NousResearch/Meta-Llama-3-8B"
 DATASET_PATH="configs/data/mj_sd3.5_cfg4.5_40_steps_preprocessed.yaml"
+TORCH_DISTRIBUTED_DEBUG="INFO"
 
-
-CUDA_VISIBLE_DEVICES=7 accelerate launch --num_processes=1 --mixed_precision fp16 --main_process_port $PORT main.py \
+CUDA_VISIBLE_DEVICES=5,6 accelerate launch --num_processes=2 --multi_gpu --mixed_precision fp16 --main_process_port $PORT main.py \
     --pretrained_model_name_or_path_dm=$MODEL_NAME \
     --pretrained_model_name_or_path_llm=$MODEL_NAME_LLM \
     --train_dataloader_config_path=$DATASET_PATH \
@@ -20,17 +20,17 @@ CUDA_VISIBLE_DEVICES=7 accelerate launch --num_processes=1 --mixed_precision fp1
     --text_embedding_3_column="t5xxl_text_embedding" \
     --pooled_text_embedding_column="vit_l_14_pooled_text_embedding" \
     --pooled_text_embedding_2_column="vit_bigg_14_pooled_text_embedding" \
-    --train_batch_size=3 \
+    --train_batch_size=2 \
     --gradient_checkpointing \
     --checkpointing_steps=5000 \
-    --learning_rate=2e-6 \
+    --learning_rate=3e-4 \
     --lr_scheduler="constant_with_warmup" \
     --lr_warmup_steps=300 \
     --seed=42 \
     --output_dir="results" \
     --rank=64 \
     --apply_lora_to_attn_projections \
-    --validation_steps=20 \
+    --validation_steps=2 \
     --evaluation_steps=10 \
     --coco_ref_stats_path stats/fid_stats_mscoco256_val.npz \
     --inception_path stats/pt_inception-2015-12-05-6726825d.pth \

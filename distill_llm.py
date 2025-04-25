@@ -412,7 +412,7 @@ def prepare_models(args, accelerator):
     accelerator.register_load_state_pre_hook(load_model_hook)
 
     if args.gradient_checkpointing:
-        transformer_llm.gradient_checkpointing_enable()
+        transformer_llm.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False},)
         transformer_dm.enable_gradient_checkpointing()
 
     # Enable TF32 for faster training on Ampere GPUs,

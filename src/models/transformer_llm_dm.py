@@ -34,7 +34,7 @@ class TransformerLLM(nn.Module):
             nn.Linear(transformer_llm.config.hidden_size, transformer_llm.config.hidden_size),
             copy.deepcopy(transformer_llm.model.model.layers[0].post_attention_layernorm),
         )
-        self.pos_embed_layer_dm = pos_embed_layer_dm
+        self.pos_embed_layer_dm = copy.deepcopy(pos_embed_layer_dm)
         self.proj_out = nn.Linear(transformer_llm.config.hidden_size,
                                   self.patch_size * self.patch_size * 16, bias=True)
 
@@ -42,7 +42,7 @@ class TransformerLLM(nn.Module):
         self.adapter_layer.requires_grad_(True)
         self.proj_out.requires_grad_(True)
 
-    def forward(self, embeddings_text, latent_image):
+    def forward(self, embeddings_text, latent_image, is_train=False):
         # Create unified embeddings
         embeddings_image = self.pos_embed_layer_dm(latent_image) # [b x 16 x 128 x 128] -> [b x 4096 x 2432]
         embeddings_image = self.adapter_layer(embeddings_image) # [b x 4096 x 2432] -> [b x 4096 x 4096]
@@ -58,8 +58,9 @@ class TransformerLLM(nn.Module):
         mask_4d = mask_4d.expand(-1, num_heads, -1, -1).cuda()
 
         outputs = self.model(inputs_embeds=embeddings, attention_mask=mask_4d)
-        last_hidden_states = outputs.hidden_states[-1]
+        last_hidden_states = outputs.logits
         seq_idx = last_hidden_states.shape[1] - 4096
+        _ = last_hidden_states[:, :seq_idx, :]
         hidden_states = last_hidden_states[:, seq_idx:, :]
         hidden_states = self.proj_out(hidden_states)
 
@@ -76,5 +77,8 @@ class TransformerLLM(nn.Module):
             shape=(hidden_states.shape[0], self.out_channels, height * patch_size, width * patch_size)
         )
 
-        return output
+        if is_train:
+            return output, _
+        else:
+            return output
 # ----------------------------------------------------------------------------------------------------------------------

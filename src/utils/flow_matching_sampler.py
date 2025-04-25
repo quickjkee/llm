@@ -53,6 +53,7 @@ class FlowMatchingSolver:
             if (idx_start + 1)[0].item() == idx_end[0].item():
                 break
             idx_start = idx_start + 1
+            print(idx_start, idx_end)
 
         return latent
     ## ---------------------------------------------------------------------------

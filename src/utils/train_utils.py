@@ -29,27 +29,7 @@ if is_wandb_available():
 VALIDATION_PROMPTS = [
     "portrait photo of a girl, photograph, highly detailed face, depth of field, moody light, golden hour, style by Dan Winters, Russell James, Steve McCurry, centered, extremely detailed, Nikon D850, award winning photography",
     "Self-portrait oil painting, a beautiful cyborg with golden hair, 8k",
-    'A girl with pale blue hair and a cami tank top',
-    'cute girl, Kyoto animation, 4k, high resolution',
-    "Four cows in a pen on a sunny day",
-    "Three dogs sleeping together on an unmade bed",
-    "a deer with bird feathers, highly detailed, full body",
-    "A sky blue colored hippopotamus",
-    "a masterpiece of gastronomy, a small plate, crab phalanges, cream sauce",
-    "The interior of a mad scientists laboratory, Cluttered with science experiments, tools and strange machines, Eerie purple light, Close up, by Miyazaki",
-    "a barred owl peeking out from dense tree branches",
-    "a close-up of a blue dragonfly on a daffodil",
-    "A green train is coming down the tracks",
-    "A photograph of the inside of a subway train. There are frogs sitting on the seats. One of them is reading a newspaper. The window shows the river in the background.",
-    "a family of four posing at the Grand Canyon",
-    "A high resolution photo of a donkey in a clown costume giving a lecture at the front of a lecture hall. The blackboard has mathematical equations on it. There are many students in the lecture hall.",
-    "A castle made of tortilla chips, in a river made of salsa. There are tiny burritos walking around the castle",
-    "A tornado made of bees crashing into a skyscraper. painting in the style of Hokusai.",
-    "A raccoon wearing formal clothes, wearing a tophat and holding a cane. The raccoon is holding a garbage bag. Oil painting in the style of abstract cubism.",
-    "A castle made of cardboard.",
-    "A cartoon tiger face",
 ]
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 @torch.no_grad()
@@ -87,9 +67,9 @@ def log_validation(
         idx_start = torch.tensor([0] * len(embeds_llm))
         idx_end = torch.tensor([len(sigmas) - 1] * len(embeds_llm))
         sampling_fn = fm_solver.flow_matching_sampling
-        
+    
         images = []
-        for _ in range(4):
+        for _ in range(1):
             latent = torch.randn(
                 (1, 16, 128, 128), 
                 generator=generator, 
@@ -111,7 +91,7 @@ def log_validation(
         image_logs.append({"validation_prompt": prompt, "images": images})
     
     torch.cuda.empty_cache()
-        
+    k = 0       
     for tracker in accelerator.trackers:
         if tracker.name == "tensorboard":
             for log in image_logs:
@@ -119,10 +99,8 @@ def log_validation(
                 validation_prompt = log["validation_prompt"]
                 formatted_images = []
                 for image in images:
-                    formatted_images.append(np.asarray(image.resize((512, 512))))
-
-                formatted_images = np.stack(formatted_images)
-                tracker.writer.add_images(validation_prompt, formatted_images, global_step, dataformats="NHWC")
+                    image.save(f'{args.output_dir}/{global_step}_{k}.jpg')
+                    k += 1
         else:
             logger.warn(f"image logging not implemented for {tracker.name}")
 
