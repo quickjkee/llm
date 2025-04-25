@@ -169,7 +169,9 @@ def train(args):
 
                 log_validation(
                     args, accelerator,
-                    tokenizer, text_embedding_layer_llm, transformer_llm,
+                    tokenizer, 
+                    unwrap_model(text_embedding_layer_llm, accelerator).to(torch.float16), 
+                    unwrap_model(transformer_llm, accelerator).to(torch.float16),
                     fm_solver, noise_scheduler,
                     logger, global_step, image_processor, vae
                 )

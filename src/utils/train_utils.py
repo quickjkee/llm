@@ -52,7 +52,7 @@ def log_validation(
 
     generator = torch.Generator(device=accelerator.device).manual_seed(args.seed) if args.seed else None
     weight_dtype = torch.float16
-        
+
     image_logs = []
     for _, prompt in enumerate(validation_prompts):
         # Sample batch in a loop to save memory
@@ -67,7 +67,7 @@ def log_validation(
         idx_start = torch.tensor([0] * len(embeds_llm))
         idx_end = torch.tensor([len(sigmas) - 1] * len(embeds_llm))
         sampling_fn = fm_solver.flow_matching_sampling
-    
+
         images = []
         for _ in range(1):
             latent = torch.randn(

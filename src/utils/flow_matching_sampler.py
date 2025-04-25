@@ -35,7 +35,6 @@ class FlowMatchingSolver:
         sigmas=None,
     ):
         sigmas = self.noise_scheduler.sigmas if sigmas is None else sigmas
-
         while True:
             sigma = sigmas[idx_start].to(device=latent.device)
             sigma_next = sigmas[idx_start + 1].to(device=latent.device)
@@ -53,7 +52,6 @@ class FlowMatchingSolver:
             if (idx_start + 1)[0].item() == idx_end[0].item():
                 break
             idx_start = idx_start + 1
-            print(idx_start, idx_end)
 
         return latent
     ## ---------------------------------------------------------------------------
