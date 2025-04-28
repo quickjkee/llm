@@ -10,7 +10,7 @@ from torch.cuda.amp import autocast
 # ----------------------------------------------------------------------------------------------------------------------
 def diffusion_loss(
         transformer_llm, transformer_dm,
-        prompt_embeds_dm, pooled_prompt_embeds_dm, embeds_llm,
+        prompt_embeds_dm, pooled_prompt_embeds_dm, embeds_llm, mask_llm,
         noisy_latent_image, timesteps,
         optimizer, lr_scheduler, params_to_optimize,
         accelerator, args,
@@ -23,31 +23,29 @@ def diffusion_loss(
     with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16):
         model_pred_target = transformer_dm(
             noisy_latent_image,
-            prompt_embeds_dm,
-            pooled_prompt_embeds_dm,
+            prompt_embeds_dm.to(torch.float16),
+            pooled_prompt_embeds_dm.to(torch.float16),
             timesteps,
             return_dict=False,
         )[0]
 
     ## STEP 2. Make a prediction
-    with autocast(dtype=torch.float32):
-        model_pred = transformer_llm(
-            embeds_llm,
+    model_pred = transformer_llm(
+            embeds_llm, mask_llm,
             noisy_latent_image
         )
 
     ## STEP 3. Calculate DM loss and update the generator
-    with autocast(enabled=False):
-        c = 0.0
-        loss = torch.sqrt((model_pred.float() - model_pred_target.float()) ** 2 + c ** 2) - c
-        loss = torch.mean(loss)
+    loss = F.huber_loss(model_pred.float(), model_pred_target.float(), delta=1.0)
     
     ## Backpropagate
     accelerator.backward(loss)
 
-    for name, param in transformer_llm.named_parameters():
-        if param.grad is None and param.requires_grad:
-            print(f"Unused parameter: {name}")
+#    check = False
+#    for name, param in transformer_llm.named_parameters():
+#        if 'lora' in name and param.requires_grad and not check:
+#            print(param.grad.norm().item(), param.norm().item(), name)
+#            check = True
 
     if accelerator.sync_gradients:
         accelerator.clip_grad_norm_(params_to_optimize, args.max_grad_norm)

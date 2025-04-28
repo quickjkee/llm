@@ -58,7 +58,6 @@ DATASET_NAME_MAPPING = {
     "lambdalabs/naruto-blip-captions": ("image", "text"),
 }
 
-
 ########################################################################################################################
 #                                               TRAINING                                                               #
 ########################################################################################################################
@@ -92,7 +91,8 @@ def train(args):
     transformer_llm = TransformerLLM(transformer_llm,
                                      transformer_dm.pos_embed,
                                      transformer_dm.inner_dim)
-    transformer_llm = accelerator.prepare(transformer_llm).to(torch.float32)
+    cast_training_params(transformer_llm, dtype=torch.float32)
+    transformer_llm = accelerator.prepare(transformer_llm)
     transformer_dm = accelerator.prepare(transformer_dm)
     text_embedding_layer_llm = accelerator.prepare(text_embedding_layer_llm)
 
@@ -136,7 +136,7 @@ def train(args):
 
         ### Sample a batch and calculate the loss
         ### ----------------------------------------------------
-        latent_image, embeds_llm, prompt_embeds_dm, pooled_prompt_embeds_dm = sample_batch(
+        latent_image, embeds_llm, mask_llm, prompt_embeds_dm, pooled_prompt_embeds_dm = sample_batch(
             args, accelerator, batch,
             tokenizer, text_embedding_layer_llm,
             vae, weight_dtype
@@ -150,7 +150,7 @@ def train(args):
 
         avg_dm_loss = diffusion_loss(
             transformer_llm, transformer_dm,
-            prompt_embeds_dm, pooled_prompt_embeds_dm, embeds_llm,
+            prompt_embeds_dm, pooled_prompt_embeds_dm, embeds_llm, mask_llm,
             noisy_latent_image, timesteps,
             optimizer, lr_scheduler, params_to_optimize,
             accelerator, args,
@@ -170,8 +170,8 @@ def train(args):
                 log_validation(
                     args, accelerator,
                     tokenizer, 
-                    unwrap_model(text_embedding_layer_llm, accelerator).to(torch.float16), 
-                    unwrap_model(transformer_llm, accelerator).to(torch.float16),
+                    unwrap_model(text_embedding_layer_llm, accelerator), 
+                    unwrap_model(transformer_llm, accelerator),
                     fm_solver, noise_scheduler,
                     logger, global_step, image_processor, vae
                 )
@@ -249,8 +249,9 @@ def sample_batch(args, accelerator, batch,
                       padding=True,
                       return_tensors="pt").to(accelerator.device)
     embeds_llm = llm_embedding(inputs["input_ids"])
+    mask_llm = inputs["attention_mask"]
 
-    return latent_image, embeds_llm, prompt_embeds_dm, pooled_prompt_embeds_dm
+    return latent_image, embeds_llm, mask_llm, prompt_embeds_dm, pooled_prompt_embeds_dm
 # ----------------------------------------------------------------------------------------------------------------------
 
 

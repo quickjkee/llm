@@ -30,7 +30,7 @@ class FlowMatchingSolver:
         self,
         model,
         latent,
-        embeds_llm,
+        embeds_llm, mask_llm,
         idx_start, idx_end,
         sigmas=None,
     ):
@@ -42,6 +42,7 @@ class FlowMatchingSolver:
             with torch.autocast("cuda", dtype=torch.float16):
                 noise_pred = model(
                     embeds_llm,
+                    mask_llm,
                     latent
                 )
 

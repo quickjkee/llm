@@ -60,6 +60,7 @@ def log_validation(
                            padding=True,
                            return_tensors="pt").to(accelerator.device)
         embeds_llm = text_embedding_layer_llm(inputs["input_ids"])
+        mask_llm = inputs["attention_mask"]
 
         noise_scheduler_ = copy.deepcopy(noise_scheduler)
         noise_scheduler_.set_timesteps(28)
@@ -78,7 +79,8 @@ def log_validation(
             image = sampling_fn(
                 transformer_llm,
                 latent,
-                embeds_llm,
+                embeds_llm, 
+                mask_llm,
                 idx_start, idx_end,
                 sigmas=sigmas,
             ).to(weight_dtype)

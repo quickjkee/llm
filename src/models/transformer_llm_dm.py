@@ -42,7 +42,7 @@ class TransformerLLM(nn.Module):
         self.adapter_layer.requires_grad_(True)
         self.proj_out.requires_grad_(True)
 
-    def forward(self, embeddings_text, latent_image):
+    def forward(self, embeddings_text, mask_llm, latent_image):
         # Create unified embeddings
         embeddings_image = self.pos_embed_layer_dm(latent_image) # [b x 16 x 128 x 128] -> [b x 4096 x 2432]
         embeddings_image = self.adapter_layer(embeddings_image) # [b x 4096 x 2432] -> [b x 4096 x 4096]
@@ -50,17 +50,12 @@ class TransformerLLM(nn.Module):
 
         # Create a unified attention mask. The text does not participate in a calculation.
         b_size, seq_len_text,  seq_len_img = embeddings.shape[0], embeddings_text.shape[1], embeddings_image.shape[1]
-        attention_mask_text = torch.zeros(b_size, seq_len_text, seq_len_text + seq_len_img)
-        attention_mask_imgs = torch.ones(b_size, seq_len_img, seq_len_img + seq_len_text)
-        attention_mask = torch.cat([attention_mask_text, attention_mask_imgs], dim=1)
-        mask_4d = attention_mask.unsqueeze(1)
-        num_heads = self.model.config.num_attention_heads
-        mask_4d = mask_4d.expand(-1, num_heads, -1, -1).cuda()
+        attention_mask = torch.ones(b_size, seq_len_img).cuda()
+        attention_mask = torch.cat((mask_llm, attention_mask), dim=1)
 
-        outputs = self.model(inputs_embeds=embeddings, attention_mask=mask_4d)
+        outputs = self.model(inputs_embeds=embeddings, attention_mask=attention_mask)
         last_hidden_states = outputs.logits
         seq_idx = last_hidden_states.shape[1] - 4096
-        _ = last_hidden_states[:, :seq_idx, :]
         hidden_states = last_hidden_states[:, seq_idx:, :]
         hidden_states = self.proj_out(hidden_states)
 

@@ -24,13 +24,13 @@ CUDA_VISIBLE_DEVICES=5,6 accelerate launch --num_processes=2 --multi_gpu --mixed
     --gradient_checkpointing \
     --checkpointing_steps=5000 \
     --learning_rate=3e-4 \
+    --lr_warmup_steps=0 \
     --lr_scheduler="constant_with_warmup" \
-    --lr_warmup_steps=300 \
     --seed=42 \
     --output_dir="results" \
     --rank=64 \
     --apply_lora_to_attn_projections \
-    --validation_steps=2 \
+    --validation_steps=50 \
     --evaluation_steps=10 \
     --coco_ref_stats_path stats/fid_stats_mscoco256_val.npz \
     --inception_path stats/pt_inception-2015-12-05-6726825d.pth \
