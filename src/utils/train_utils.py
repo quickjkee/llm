@@ -106,7 +106,7 @@ def log_validation(
                     #k += 1
 
                 formatted_images = np.stack(formatted_images)
-                tracker.writer.add_images(validation_prompt, formatted_images, step, dataformats="NHWC")
+                tracker.writer.add_images(validation_prompt, formatted_images, global_step, dataformats="NHWC")
         else:
             logger.warn(f"image logging not implemented for {tracker.name}")
 
