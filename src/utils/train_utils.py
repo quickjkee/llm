@@ -63,7 +63,7 @@ def log_validation(
         mask_llm = inputs["attention_mask"]
 
         noise_scheduler_ = copy.deepcopy(noise_scheduler)
-        noise_scheduler_.set_timesteps(28)
+        noise_scheduler_.set_timesteps(1)
         sigmas = noise_scheduler_.sigmas
         idx_start = torch.tensor([0] * len(embeds_llm))
         idx_end = torch.tensor([len(sigmas) - 1] * len(embeds_llm))
