@@ -58,7 +58,7 @@ def diffusion_loss(
     avg_loss = accelerator.gather(loss.repeat(args.train_batch_size)).mean()
     avg_loss += avg_loss.item() / args.gradient_accumulation_steps
 
-    if do_eval:
+    if do_eval and accelerator.is_main_process:
         with torch.no_grad():
             denoised_pred = noisy_latent_image - timesteps[0].item() / 1000 * model_pred
             target_pred = noisy_latent_image - timesteps[0].item() / 1000 * model_pred_target
