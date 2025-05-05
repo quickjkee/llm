@@ -142,18 +142,20 @@ def train(args):
             vae, weight_dtype
         )
 
-        u = torch.zeros(size=(latent_image.shape[0],))
+        u = torch.zeros(size=(latent_image.shape[0],)) * 0.5
         indices = (u * noise_scheduler.config.num_train_timesteps).long()
         timesteps = noise_scheduler.timesteps[indices].to(accelerator.device)
         noise = torch.randn_like(latent_image)
         noisy_latent_image = noise_scheduler.scale_noise(latent_image, timesteps, noise)
 
+        do_eval = True if global_step % args.validation_steps == 0 else False
         avg_dm_loss = diffusion_loss(
             transformer_llm, transformer_dm,
             prompt_embeds_dm, pooled_prompt_embeds_dm, embeds_llm, mask_llm,
             noisy_latent_image, timesteps,
             optimizer, lr_scheduler, params_to_optimize,
             accelerator, args,
+            vae, global_step, do_eval
         )
         ### ----------------------------------------------------
 

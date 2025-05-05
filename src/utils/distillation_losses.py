@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch.cuda.amp import autocast
+from diffusers.image_processor import VaeImageProcessor
 
 ########################################################################################################################
 #                            THE LOSSES NEEDED FOR THE DISTILLATION OF LLM                                             #
@@ -14,6 +15,7 @@ def diffusion_loss(
         noisy_latent_image, timesteps,
         optimizer, lr_scheduler, params_to_optimize,
         accelerator, args,
+        vae, global_step, do_eval=False
 ):
     optimizer.zero_grad(set_to_none=True)
     transformer_llm.train()
@@ -55,6 +57,24 @@ def diffusion_loss(
 
     avg_loss = accelerator.gather(loss.repeat(args.train_batch_size)).mean()
     avg_loss += avg_loss.item() / args.gradient_accumulation_steps
+
+    if do_eval:
+        with torch.no_grad():
+            denoised_pred = noisy_latent_image - timesteps[0].item() / 1000 * model_pred
+            target_pred = noisy_latent_image - timesteps[0].item() / 1000 * model_pred_target
+            image_processor = VaeImageProcessor(vae_scale_factor=vae.config.scaling_factor)
+
+            latent = (denoised_pred / vae.config.scaling_factor) + vae.config.shift_factor
+            image = vae.decode(latent.half(), return_dict=False)[0]
+            image = image_processor.postprocess(image, output_type='pil')
+            for j, image in enumerate(image):
+                image.save(f'{args.output_dir}/{global_step}_{j}_pred.jpg')
+
+            latent = (target_pred / vae.config.scaling_factor) + vae.config.shift_factor
+            image = vae.decode(latent.half(), return_dict=False)[0]
+            image = image_processor.postprocess(image, output_type='pil')
+            for j, image in enumerate(image):
+                image.save(f'{args.output_dir}/{global_step}_{j}_target.jpg')
 
     return avg_loss
 # ----------------------------------------------------------------------------------------------------------------------
